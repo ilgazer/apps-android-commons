@@ -44,4 +44,20 @@ public interface CategoryInterface {
             + "&generator=categories&prop=info&gcllimit=500")
     Observable<MwQueryResponse> getParentCategoryList(@Query("titles") String categoryName);
 
+    /**
+     * @param searchCoords
+     * @param radius
+     * @param centerCoords
+     * @param limit
+     * @return
+     */
+    @GET("w/api.php?action=query&format=json&formatversion=2" +
+            "&generator=geosearch&ggsnamespace=6" +
+            "&prop=categories|coordinates|pageprops&clshow=!hidden" +
+            "&coprop=type|name|dim|country|region|globe" +
+            "&ggsprop=type|name|dim|country|region|globe&ggsprimary=all")
+    Observable<MwQueryResponse> getGpsCategories(@Query("ggscoord") String searchCoords,
+                                                 @Query("ggsradius") int radius,
+                                                 @Query("codistancefrompoint") String centerCoords,
+                                                 @Query("ggslimit") int limit);
 }

@@ -21,11 +21,11 @@ import timber.log.Timber;
 @Singleton
 public class CategoryClient {
 
-    private final CategoryInterface CategoryInterface;
+    private final CategoryInterface categoryInterface;
 
     @Inject
     public CategoryClient(CategoryInterface CategoryInterface) {
-        this.CategoryInterface = CategoryInterface;
+        this.categoryInterface = CategoryInterface;
     }
 
     /**
@@ -37,7 +37,7 @@ public class CategoryClient {
      * @return
      */
     public Observable<String> searchCategories(String filter, int itemLimit, int offset) {
-        return responseToCategoryName(CategoryInterface.searchCategories(filter, itemLimit, offset));
+        return responseToCategoryName(categoryInterface.searchCategories(filter, itemLimit, offset));
 
     }
 
@@ -62,7 +62,7 @@ public class CategoryClient {
      * @return
      */
     public Observable<String> searchCategoriesForPrefix(String prefix, int itemLimit, int offset) {
-        return responseToCategoryName(CategoryInterface.searchCategoriesForPrefix(prefix, itemLimit, offset));
+        return responseToCategoryName(categoryInterface.searchCategoriesForPrefix(prefix, itemLimit, offset));
     }
 
     /**
@@ -85,7 +85,7 @@ public class CategoryClient {
      * @return Observable emitting the categories returned. If our search yielded "Category:Test", "Test" is emitted.
      */
     public Observable<String> getSubCategoryList(String categoryName) {
-        return responseToCategoryName(CategoryInterface.getSubCategoryList(categoryName));
+        return responseToCategoryName(categoryInterface.getSubCategoryList(categoryName));
     }
 
     /**
@@ -97,7 +97,32 @@ public class CategoryClient {
      */
     @NonNull
     public Observable<String> getParentCategoryList(String categoryName) {
-        return responseToCategoryName(CategoryInterface.getParentCategoryList(categoryName));
+        return responseToCategoryName(categoryInterface.getParentCategoryList(categoryName));
+    }
+
+    @NonNull
+    public Observable<String> getGpsCategories(String coords) {
+        return categoryInterface.getGpsCategories(coords, 10000, coords, 20)
+                .flatMap(mwQueryResponse -> {
+                    MwQueryResult query;
+                    List<MwQueryPage> pages;
+                    if ((query = mwQueryResponse.query()) == null ||
+                            (pages = query.pages()) == null) {
+                        Timber.d("No files returned.");
+                        return Observable.empty();
+                    } else
+                        return Observable.fromIterable(pages);
+                })
+                .flatMap(page -> {
+                    if (page.categories() != null) {
+                        return Observable.fromIterable(page.categories());
+                    }
+                    Timber.d("No categories in file %s", page.title());
+                    return Observable.empty();
+                })
+                .map(MwQueryPage.Category::title)
+                .doOnEach(s -> Timber.d("Category returned: %s", s))
+                .map(cat -> cat.replace("Category:", ""));
     }
 
     /**
