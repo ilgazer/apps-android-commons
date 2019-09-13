@@ -3,7 +3,20 @@ package fr.free.nrw.commons.upload;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.net.Uri;
+
 import androidx.annotation.Nullable;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import javax.inject.Singleton;
+
 import fr.free.nrw.commons.CommonsApplication;
 import fr.free.nrw.commons.Utils;
 import fr.free.nrw.commons.auth.SessionManager;
@@ -18,15 +31,6 @@ import io.reactivex.Observable;
 import io.reactivex.Single;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.subjects.BehaviorSubject;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
 import timber.log.Timber;
 
 @Singleton
@@ -36,7 +40,7 @@ public class UploadModel {
             Uri.EMPTY, Uri.EMPTY,
             "",
             "",
-            GPSExtractor.DUMMY,
+            GPSCoordinates.DUMMY,
             null,
             -1L, "") {
     };
@@ -134,11 +138,11 @@ public class UploadModel {
             createdTimestampSource = dateTimeWithSource.getSource();
         }
         Timber.d("File created date is %d", fileCreatedDate);
-        GPSExtractor gpsExtractor = fileProcessor
+        GPSCoordinates gpsCoordinates = fileProcessor
                 .processFileCoordinates(similarImageInterface, context);
         UploadItem uploadItem = new UploadItem(uploadableFile.getContentUri(),
                 Uri.parse(uploadableFile.getFilePath()),
-                uploadableFile.getMimeType(context), source, gpsExtractor, place, fileCreatedDate,
+                uploadableFile.getMimeType(context), source, gpsCoordinates, place, fileCreatedDate,
                 createdTimestampSource);
         if (place != null) {
             uploadItem.title.setTitleText(place.name);
@@ -187,7 +191,7 @@ public class UploadModel {
                     item.getFileName(),
                     Description.formatList(item.descriptions), -1,
                     null, null, sessionManager.getAuthorName(),
-                    CommonsApplication.DEFAULT_EDIT_SUMMARY, item.gpsCoords.getCoords());
+                    CommonsApplication.DEFAULT_EDIT_SUMMARY, item.gpsCoords.decimalCoords);
             if (item.place != null) {
                 contribution.setWikiDataEntityId(item.place.getWikiDataEntityId());
             }
@@ -241,7 +245,7 @@ public class UploadModel {
         private final Uri mediaUri;
         private final String mimeType;
         private final String source;
-        private final GPSExtractor gpsCoords;
+        private final GPSCoordinates gpsCoords;
 
         private boolean selected = false;
         private boolean first = false;
@@ -256,7 +260,7 @@ public class UploadModel {
 
         @SuppressLint("CheckResult")
         UploadItem(Uri originalContentUri,
-                Uri mediaUri, String mimeType, String source, GPSExtractor gpsCoords,
+                Uri mediaUri, String mimeType, String source, GPSCoordinates gpsCoords,
                 Place place,
                 long createdTimestamp,
                 String createdTimestampSource) {
@@ -286,7 +290,7 @@ public class UploadModel {
             return source;
         }
 
-        public GPSExtractor getGpsCoords() {
+        public GPSCoordinates getGpsCoords() {
             return gpsCoords;
         }
 

@@ -4,8 +4,6 @@ import android.content.Context;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.DisplayMetrics;
-import android.util.Log;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -21,7 +19,6 @@ import androidx.appcompat.widget.AppCompatImageButton;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.github.chrisbanes.photoview.OnScaleChangedListener;
 import com.github.chrisbanes.photoview.PhotoView;
 import com.jakewharton.rxbinding2.widget.RxTextView;
 
@@ -379,8 +376,8 @@ public class UploadMediaDetailFragment extends UploadBaseFragment implements
 
     @OnClick(R.id.ib_map) public void onIbMapClicked() {
         Utils.handleGeoCoordinates(getContext(),
-            new LatLng(uploadItem.getGpsCoords().getDecLatitude(),
-                uploadItem.getGpsCoords().getDecLongitude(), 0.0f));
+            new LatLng(uploadItem.getGpsCoords().decLatitude,
+                uploadItem.getGpsCoords().decLongitude, 0.0f));
     }
 
 

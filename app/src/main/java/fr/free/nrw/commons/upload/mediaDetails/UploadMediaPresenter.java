@@ -1,17 +1,15 @@
 package fr.free.nrw.commons.upload.mediaDetails;
 
-import static fr.free.nrw.commons.di.CommonsApplicationModule.IO_THREAD;
-import static fr.free.nrw.commons.di.CommonsApplicationModule.MAIN_THREAD;
-import static fr.free.nrw.commons.utils.ImageUtils.EMPTY_TITLE;
-import static fr.free.nrw.commons.utils.ImageUtils.FILE_NAME_EXISTS;
-import static fr.free.nrw.commons.utils.ImageUtils.IMAGE_KEEP;
-import static fr.free.nrw.commons.utils.ImageUtils.IMAGE_OK;
+import java.lang.reflect.Proxy;
+
+import javax.inject.Inject;
+import javax.inject.Named;
 
 import fr.free.nrw.commons.R;
 import fr.free.nrw.commons.filepicker.UploadableFile;
 import fr.free.nrw.commons.nearby.Place;
 import fr.free.nrw.commons.repository.UploadRepository;
-import fr.free.nrw.commons.upload.GPSExtractor;
+import fr.free.nrw.commons.upload.GPSCoordinates;
 import fr.free.nrw.commons.upload.SimilarImageInterface;
 import fr.free.nrw.commons.upload.UploadModel.UploadItem;
 import fr.free.nrw.commons.upload.mediaDetails.UploadMediaDetailsContract.UserActionListener;
@@ -19,13 +17,14 @@ import fr.free.nrw.commons.upload.mediaDetails.UploadMediaDetailsContract.View;
 import io.reactivex.Scheduler;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.disposables.Disposable;
-
-import java.lang.reflect.Proxy;
-
-import javax.inject.Inject;
-import javax.inject.Named;
-
 import timber.log.Timber;
+
+import static fr.free.nrw.commons.di.CommonsApplicationModule.IO_THREAD;
+import static fr.free.nrw.commons.di.CommonsApplicationModule.MAIN_THREAD;
+import static fr.free.nrw.commons.utils.ImageUtils.EMPTY_TITLE;
+import static fr.free.nrw.commons.utils.ImageUtils.FILE_NAME_EXISTS;
+import static fr.free.nrw.commons.utils.ImageUtils.IMAGE_KEEP;
+import static fr.free.nrw.commons.utils.ImageUtils.IMAGE_OK;
 
 public class UploadMediaPresenter implements UserActionListener, SimilarImageInterface {
 
@@ -81,8 +80,8 @@ public class UploadMediaPresenter implements UserActionListener, SimilarImageInt
                 .subscribe(uploadItem ->
                         {
                             view.onImageProcessed(uploadItem, place);
-                            GPSExtractor gpsCoords = uploadItem.getGpsCoords();
-                            view.showMapWithImageCoordinates((gpsCoords != null && gpsCoords.imageCoordsExists) ? true : false);
+                            GPSCoordinates gpsCoords = uploadItem.getGpsCoords();
+                            view.showMapWithImageCoordinates((gpsCoords != null && gpsCoords.isEmpty) ? true : false);
                             view.showProgress(false);
                         },
                         throwable -> Timber.e(throwable, "Error occurred in processing images"));
