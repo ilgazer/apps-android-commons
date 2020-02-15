@@ -1,8 +1,7 @@
 package fr.free.nrw.commons.upload
 
 import android.content.SharedPreferences
-import androidx.exifinterface.media.ExifInterface
-import fr.free.nrw.commons.caching.CacheController
+import fr.free.nrw.commons.caching.GpsCacheController
 import fr.free.nrw.commons.mwapi.CategoryApi
 import org.junit.Before
 import org.junit.Test
@@ -12,13 +11,10 @@ import org.mockito.MockitoAnnotations
 import javax.inject.Inject
 import javax.inject.Named
 
-import java.io.FileInputStream
-import java.io.FileOutputStream
-
 class FileProcessorTest {
 
     @Mock
-    internal var cacheController: CacheController? = null
+    internal var gpsCacheController: GpsCacheController? = null
     @Mock
     internal var gpsCategoryModel: GpsCategoryModel? = null
     @Mock

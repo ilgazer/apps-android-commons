@@ -9,6 +9,8 @@ import javax.inject.Singleton;
 
 import fr.free.nrw.commons.media.MediaClient;
 import fr.free.nrw.commons.nearby.Place;
+import fr.free.nrw.commons.upload.metadata.EXIFReader;
+import fr.free.nrw.commons.upload.metadata.ReadFBMD;
 import fr.free.nrw.commons.utils.ImageUtils;
 import fr.free.nrw.commons.utils.ImageUtilsWrapper;
 import io.reactivex.Single;
@@ -26,7 +28,7 @@ public class ImageProcessingService {
     private final FileUtilsWrapper fileUtilsWrapper;
     private final ImageUtilsWrapper imageUtilsWrapper;
     private final ReadFBMD readFBMD;
-    private final EXIFReader EXIFReader;
+    private final fr.free.nrw.commons.upload.metadata.EXIFReader EXIFReader;
     private final MediaClient mediaClient;
 
     @Inject
@@ -90,7 +92,7 @@ public class ImageProcessingService {
      * for the presence of some basic Exif metadata.
      */
     private Single<Integer> checkEXIF(String filepath) {
-        return EXIFReader.processMetadata(filepath);
+        return EXIFReader.checkBasicMetadata(filepath);
     }
 
 

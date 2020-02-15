@@ -27,7 +27,6 @@ import fr.free.nrw.commons.BuildConfig;
 import fr.free.nrw.commons.R;
 import fr.free.nrw.commons.auth.AccountUtil;
 import fr.free.nrw.commons.auth.SessionManager;
-import fr.free.nrw.commons.caching.CacheController;
 import fr.free.nrw.commons.data.DBOpenHelper;
 import fr.free.nrw.commons.kvstore.JsonKvStore;
 import fr.free.nrw.commons.location.LocationServiceManager;
@@ -41,8 +40,8 @@ import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.schedulers.Schedulers;
 
 /**
- * The Dependency Provider class for Commons Android. 
- * 
+ * The Dependency Provider class for Commons Android.
+ * <p>
  * Provides all sorts of ContentProviderClients used by the app
  * along with the Liscences, AccountUtility, UploadController, Logged User,
  * Location manager etc
@@ -51,8 +50,8 @@ import io.reactivex.schedulers.Schedulers;
 @SuppressWarnings({"WeakerAccess", "unused"})
 public class CommonsApplicationModule {
     private Context applicationContext;
-    public static final String IO_THREAD="io_thread";
-    public static final String MAIN_THREAD="main_thread";
+    public static final String IO_THREAD = "io_thread";
+    public static final String MAIN_THREAD = "main_thread";
 
     public CommonsApplicationModule(Context applicationContext) {
         this.applicationContext = applicationContext;
@@ -98,7 +97,7 @@ public class CommonsApplicationModule {
     }
 
     /**
-     * Provides an instance of CategoryContentProviderClient i.e. the categories 
+     * Provides an instance of CategoryContentProviderClient i.e. the categories
      * that are there in local storage
      */
     @Provides
@@ -110,6 +109,7 @@ public class CommonsApplicationModule {
     /**
      * This method is used to provide instance of RecentSearchContentProviderClient
      * which provides content of Recent Searches from database
+     *
      * @param context
      * @return returns RecentSearchContentProviderClient
      */
@@ -146,6 +146,7 @@ public class CommonsApplicationModule {
     /**
      * Provides a Json store instance(JsonKvStore) which keeps
      * the provided Gson in it's instance
+     *
      * @param gson stored inside the store instance
      */
     @Provides
@@ -189,6 +190,7 @@ public class CommonsApplicationModule {
 
     /**
      * Provides app flavour. Can be used to alter flows in the app
+     *
      * @return
      */
     @Named("isBeta")
@@ -200,11 +202,11 @@ public class CommonsApplicationModule {
 
     /**
      * Provide JavaRx IO scheduler which manages IO operations
-     * across various Threads 
+     * across various Threads
      */
     @Named(IO_THREAD)
     @Provides
-    public Scheduler providesIoThread(){
+    public Scheduler providesIoThread() {
         return Schedulers.io();
     }
 
@@ -226,7 +228,7 @@ public class CommonsApplicationModule {
      * @return
      */
     @Provides
-    public QuadTree providesQuadTres() {
-        return new QuadTree<>(-180, -90, +180, +90);
+    public QuadTree<List<String>> providesQuadTree() {
+        return new QuadTree<List<String>>(-180, -90, +180, +90);
     }
 }

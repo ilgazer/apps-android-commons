@@ -1,4 +1,4 @@
-package fr.free.nrw.commons.upload;
+package fr.free.nrw.commons.upload.metadata;
 
 import java.io.FileInputStream;
 import java.io.IOException;

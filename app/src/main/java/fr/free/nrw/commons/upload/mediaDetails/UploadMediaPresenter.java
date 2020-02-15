@@ -9,11 +9,11 @@ import fr.free.nrw.commons.R;
 import fr.free.nrw.commons.filepicker.UploadableFile;
 import fr.free.nrw.commons.nearby.Place;
 import fr.free.nrw.commons.repository.UploadRepository;
-import fr.free.nrw.commons.upload.GPSExtractor;
 import fr.free.nrw.commons.upload.SimilarImageInterface;
 import fr.free.nrw.commons.upload.UploadModel.UploadItem;
 import fr.free.nrw.commons.upload.mediaDetails.UploadMediaDetailsContract.UserActionListener;
 import fr.free.nrw.commons.upload.mediaDetails.UploadMediaDetailsContract.View;
+import fr.free.nrw.commons.upload.metadata.GPSCoordinates;
 import io.reactivex.Observable;
 import io.reactivex.Scheduler;
 import io.reactivex.disposables.CompositeDisposable;
@@ -81,10 +81,10 @@ public class UploadMediaPresenter implements UserActionListener, SimilarImageInt
                 .subscribe(uploadItem ->
                         {
                             view.onImageProcessed(uploadItem, place);
-                            GPSExtractor gpsCoords = uploadItem.getGpsCoords();
-                            view.showMapWithImageCoordinates(gpsCoords != null && gpsCoords.imageCoordsExists);
+                            GPSCoordinates gpsCoords = uploadItem.getGpsCoords();
+                            view.showMapWithImageCoordinates(gpsCoords != null && gpsCoords.hasCoords);
                             view.showProgress(false);
-                            if (gpsCoords != null && gpsCoords.imageCoordsExists) {
+                            if (gpsCoords != null && gpsCoords.hasCoords) {
                                 checkNearbyPlaces(uploadItem);
                             }
                         },
@@ -98,8 +98,8 @@ public class UploadMediaPresenter implements UserActionListener, SimilarImageInt
      */
     private void checkNearbyPlaces(UploadItem uploadItem) {
         Disposable checkNearbyPlaces = Observable.fromCallable(() -> repository
-                .checkNearbyPlaces(uploadItem.getGpsCoords().getDecLatitude(),
-                        uploadItem.getGpsCoords().getDecLongitude()))
+                .checkNearbyPlaces(uploadItem.getGpsCoords().decLatitude,
+                        uploadItem.getGpsCoords().decLongitude))
                 .subscribeOn(ioScheduler)
                 .observeOn(mainThreadScheduler)
                 .subscribe(place -> view.onNearbyPlaceFound(uploadItem, place),

@@ -416,8 +416,8 @@ public class UploadMediaDetailFragment extends UploadBaseFragment implements
 
     @OnClick(R.id.ib_map) public void onIbMapClicked() {
         Utils.handleGeoCoordinates(getContext(),
-            new LatLng(uploadItem.getGpsCoords().getDecLatitude(),
-                uploadItem.getGpsCoords().getDecLongitude(), 0.0f));
+            new LatLng(uploadItem.getGpsCoords().decLatitude,
+                uploadItem.getGpsCoords().decLongitude, 0.0f));
     }
 
 

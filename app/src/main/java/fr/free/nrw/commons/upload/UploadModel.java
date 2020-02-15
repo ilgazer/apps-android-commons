@@ -26,6 +26,7 @@ import fr.free.nrw.commons.filepicker.UploadableFile;
 import fr.free.nrw.commons.kvstore.JsonKvStore;
 import fr.free.nrw.commons.nearby.Place;
 import fr.free.nrw.commons.settings.Prefs;
+import fr.free.nrw.commons.upload.metadata.GPSCoordinates;
 import fr.free.nrw.commons.utils.ImageUtils;
 import io.reactivex.Observable;
 import io.reactivex.Single;
@@ -40,7 +41,7 @@ public class UploadModel {
             Uri.EMPTY, Uri.EMPTY,
             "",
             "",
-            GPSExtractor.DUMMY,
+            GPSCoordinates.DUMMY,
             null,
             -1L, "") {
     };
@@ -54,7 +55,6 @@ public class UploadModel {
     private CompositeDisposable compositeDisposable = new CompositeDisposable();
 
     private SessionManager sessionManager;
-    private FileProcessor fileProcessor;
     private final ImageProcessingService imageProcessingService;
     private List<String> selectedCategories;
 
@@ -64,7 +64,6 @@ public class UploadModel {
             @Named("licenses_by_name") Map<String, String> licensesByName,
             Context context,
             SessionManager sessionManager,
-            FileProcessor fileProcessor,
             ImageProcessingService imageProcessingService) {
         this.licenses = licenses;
         this.store = store;
@@ -72,7 +71,6 @@ public class UploadModel {
         this.licensesByName = licensesByName;
         this.context = context;
         this.sessionManager = sessionManager;
-        this.fileProcessor = fileProcessor;
         this.imageProcessingService = imageProcessingService;
     }
 
@@ -81,7 +79,6 @@ public class UploadModel {
      */
     public void cleanUp() {
         compositeDisposable.clear();
-        fileProcessor.cleanup();
         this.items.clear();
         if (this.selectedCategories != null) {
             this.selectedCategories.clear();
@@ -127,7 +124,8 @@ public class UploadModel {
             Place place,
             String source,
             SimilarImageInterface similarImageInterface) {
-        fileProcessor.initFileDetails(Objects.requireNonNull(uploadableFile.getFilePath()),
+        FileProcessor fileProcessor = new FileProcessor(
+                Objects.requireNonNull(uploadableFile.getFilePath()),
                 context.getContentResolver());
         UploadableFile.DateTimeWithSource dateTimeWithSource = uploadableFile
                 .getFileCreatedDate(context);
@@ -138,11 +136,11 @@ public class UploadModel {
             createdTimestampSource = dateTimeWithSource.getSource();
         }
         Timber.d("File created date is %d", fileCreatedDate);
-        GPSExtractor gpsExtractor = fileProcessor
+        GPSCoordinates gpsCoordinates = fileProcessor
                 .processFileCoordinates(similarImageInterface, context);
         UploadItem uploadItem = new UploadItem(uploadableFile.getContentUri(),
                 Uri.parse(uploadableFile.getFilePath()),
-                uploadableFile.getMimeType(context), source, gpsExtractor, place, fileCreatedDate,
+                uploadableFile.getMimeType(context), source, gpsCoordinates, place, fileCreatedDate,
                 createdTimestampSource);
         if (place != null) {
             uploadItem.title.setTitleText(place.name);
@@ -194,7 +192,7 @@ public class UploadModel {
                     item.getFileName(),
                     Description.formatList(item.descriptions), -1,
                     null, null, sessionManager.getAuthorName(),
-                    CommonsApplication.DEFAULT_EDIT_SUMMARY, item.gpsCoords.getCoords());
+                    CommonsApplication.DEFAULT_EDIT_SUMMARY, item.gpsCoords.decimalCoords);
             if (item.place != null) {
                 contribution.setWikiDataEntityId(item.place.getWikiDataEntityId());
             }
@@ -248,7 +246,7 @@ public class UploadModel {
         private final Uri mediaUri;
         private final String mimeType;
         private final String source;
-        private final GPSExtractor gpsCoords;
+        private final GPSCoordinates gpsCoords;
 
         private boolean selected = false;
         private boolean first = false;
@@ -263,7 +261,7 @@ public class UploadModel {
 
         @SuppressLint("CheckResult")
         UploadItem(Uri originalContentUri,
-                Uri mediaUri, String mimeType, String source, GPSExtractor gpsCoords,
+                Uri mediaUri, String mimeType, String source, GPSCoordinates gpsCoords,
                 Place place,
                 long createdTimestamp,
                 String createdTimestampSource) {
@@ -292,7 +290,7 @@ public class UploadModel {
             return source;
         }
 
-        public GPSExtractor getGpsCoords() {
+        public GPSCoordinates getGpsCoords() {
             return gpsCoords;
         }
 

@@ -4,6 +4,8 @@ import android.net.Uri
 import fr.free.nrw.commons.location.LatLng
 import fr.free.nrw.commons.media.MediaClient
 import fr.free.nrw.commons.nearby.Place
+import fr.free.nrw.commons.upload.metadata.EXIFReader
+import fr.free.nrw.commons.upload.metadata.ReadFBMD
 import fr.free.nrw.commons.utils.ImageUtils
 import fr.free.nrw.commons.utils.ImageUtilsWrapper
 import io.reactivex.Single
@@ -81,7 +83,7 @@ class u {
                 .thenReturn(Single.just(false))
         `when`(readFBMD?.processMetadata(ArgumentMatchers.any()))
                 .thenReturn(Single.just(ImageUtils.IMAGE_OK))
-        `when`(readEXIF?.processMetadata(ArgumentMatchers.anyString()))
+        `when`(readEXIF?.checkBasicMetadata(ArgumentMatchers.anyString()))
                 .thenReturn(Single.just(ImageUtils.IMAGE_OK))
     }
 

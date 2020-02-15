@@ -15,7 +15,6 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import javax.inject.Inject;
@@ -23,11 +22,12 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 
 import fr.free.nrw.commons.R;
-import fr.free.nrw.commons.caching.CacheController;
+import fr.free.nrw.commons.caching.GpsCacheController;
 import fr.free.nrw.commons.kvstore.JsonKvStore;
-import fr.free.nrw.commons.mwapi.CategoryApi;
 import fr.free.nrw.commons.settings.Prefs;
 import fr.free.nrw.commons.upload.SimilarImageDialogFragment.Callback;
+import fr.free.nrw.commons.upload.metadata.FileMetadataUtils;
+import fr.free.nrw.commons.upload.metadata.GPSCoordinates;
 import io.reactivex.Observable;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.disposables.Disposable;
@@ -41,32 +41,26 @@ import timber.log.Timber;
 public class FileProcessor implements Callback {
 
     @Inject
-    CacheController cacheController;
+    GpsCacheController gpsCacheController;
     @Inject
     GpsCategoryModel gpsCategoryModel;
-    @Inject
-    CategoryApi apiCall;
     @Inject
     @Named("default_preferences")
     JsonKvStore defaultKvStore;
     private String filePath;
     private ContentResolver contentResolver;
-    private GPSExtractor imageObj;
+    private GPSCoordinates imageObj;
     private String decimalCoords;
     private ExifInterface exifInterface;
     private boolean haveCheckedForOtherImages = false;
-    private GPSExtractor tempImageObj;
+    private GPSCoordinates tempImageObj;
     private CompositeDisposable compositeDisposable = new CompositeDisposable();
-
-    @Inject
-    public FileProcessor() {
-    }
 
     public void cleanup() {
         compositeDisposable.clear();
     }
 
-    void initFileDetails(@NonNull String filePath, ContentResolver contentResolver) {
+    public FileProcessor(@NonNull String filePath, ContentResolver contentResolver) {
         this.filePath = filePath;
         this.contentResolver = contentResolver;
         try {
@@ -79,14 +73,14 @@ public class FileProcessor implements Callback {
     /**
      * Processes filePath coordinates, either from EXIF data or user location
      */
-    GPSExtractor processFileCoordinates(SimilarImageInterface similarImageInterface, Context context) {
+    GPSCoordinates processFileCoordinates(SimilarImageInterface similarImageInterface, Context context) {
         // Redact EXIF data as indicated in preferences.
         redactExifTags(exifInterface, getExifTagsToRedact(context));
 
-        Timber.d("Calling GPSExtractor");
-        imageObj = new GPSExtractor(exifInterface);
-        decimalCoords = imageObj.getCoords();
-        if (decimalCoords == null || !imageObj.imageCoordsExists) {
+        Timber.d("Calling GPSCoordinates");
+        imageObj = GPSCoordinates.from(exifInterface);
+        decimalCoords = imageObj.decimalCoords;
+        if (decimalCoords == null || !imageObj.hasCoords) {
             //Find other photos taken around the same time which has gps coordinates
             if (!haveCheckedForOtherImages)
                 findOtherImages(similarImageInterface);// Do not do repeat the process
@@ -101,10 +95,11 @@ public class FileProcessor implements Callback {
      * Gets EXIF Tags from preferences to be redacted.
      *
      * @param context application context
-     * @return        tags to be redacted
+     * @return tags to be redacted
      */
     private Set<String> getExifTagsToRedact(Context context) {
-        Type setType = new TypeToken<Set<String>>() {}.getType();
+        Type setType = new TypeToken<Set<String>>() {
+        }.getType();
         Set<String> prefManageEXIFTags = defaultKvStore.getStringSet(Prefs.MANAGED_EXIF_TAGS);
 
         Set<String> redactTags = new HashSet<>(Arrays.asList(
@@ -119,28 +114,28 @@ public class FileProcessor implements Callback {
     /**
      * Redacts EXIF metadata as indicated in preferences.
      *
-     * @param exifInterface  ExifInterface object
-     * @param redactTags     tags to be redacted
+     * @param exifInterface ExifInterface object
+     * @param redactTags    tags to be redacted
      */
     public static void redactExifTags(ExifInterface exifInterface, Set<String> redactTags) {
-        if(redactTags.isEmpty()) return;
+        if (redactTags.isEmpty()) return;
 
-         Disposable disposable = Observable.fromIterable(redactTags)
-                 .flatMap(tag -> Observable.fromArray(FileMetadataUtils.getTagsFromPref(tag)))
-                 .forEach(tag -> {
-                     Timber.d("Checking for tag: %s", tag);
-                     String oldValue = exifInterface.getAttribute(tag);
-                     if (oldValue != null && !oldValue.isEmpty()) {
-                         Timber.d("Exif tag %s with value %s redacted.", tag, oldValue);
-                         exifInterface.setAttribute(tag, null);
-                     }
-                 });
-         CompositeDisposable disposables = new CompositeDisposable();
-         disposables.add(disposable);
-         disposables.clear();
+        Disposable disposable = Observable.fromIterable(redactTags)
+                .flatMap(tag -> Observable.fromArray(FileMetadataUtils.getTagsFromPref(tag)))
+                .forEach(tag -> {
+                    Timber.d("Checking for tag: %s", tag);
+                    String oldValue = exifInterface.getAttribute(tag);
+                    if (oldValue != null && !oldValue.isEmpty()) {
+                        Timber.d("Exif tag %s with value %s redacted.", tag, oldValue);
+                        exifInterface.setAttribute(tag, null);
+                    }
+                });
+        CompositeDisposable disposables = new CompositeDisposable();
+        disposables.add(disposable);
+        disposables.clear();
 
-         try {
-             exifInterface.saveAttributes();
+        try {
+            exifInterface.saveAttributes();
         } catch (IOException e) {
             Timber.w("EXIF redaction failed: %s", e.toString());
         }
@@ -148,6 +143,7 @@ public class FileProcessor implements Callback {
 
     /**
      * Find other images around the same location that were taken within the last 20 sec
+     *
      * @param similarImageInterface
      */
     private void findOtherImages(SimilarImageInterface similarImageInterface) {
@@ -163,23 +159,20 @@ public class FileProcessor implements Callback {
             if (file.lastModified() - timeOfCreation <= (120 * 1000) && file.lastModified() - timeOfCreation >= -(120 * 1000)) {
                 //Make sure the photos were taken within 20seconds
                 Timber.d("fild date:" + file.lastModified() + " time of creation" + timeOfCreation);
-                tempImageObj = null;//Temporary GPSExtractor to extract coords from these photos
+                tempImageObj = GPSCoordinates.DUMMY; //Temporary GPSCoordinates to extract coords from these photos
                 try {
-                    tempImageObj = new GPSExtractor(contentResolver.openInputStream(Uri.fromFile(file)));
+                    tempImageObj = GPSCoordinates.from(contentResolver.openInputStream(Uri.fromFile(file)));
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-                if (tempImageObj != null) {
-                    tempImageObj = new GPSExtractor(file.getAbsolutePath());
+                if (!tempImageObj.hasCoords) {
+                    tempImageObj = GPSCoordinates.from(file.getAbsolutePath());
                 }
-                if (tempImageObj != null) {
-                    Timber.d("not null fild EXIF" + tempImageObj.imageCoordsExists + " coords" + tempImageObj.getCoords());
-                    if (tempImageObj.getCoords() != null && tempImageObj.imageCoordsExists) {
-                        // Current image has gps coordinates and it's not current gps locaiton
-                        Timber.d("This filePath has image coords:" + file.getAbsolutePath());
-                        similarImageInterface.showSimilarImageFragment(filePath, file.getAbsolutePath());
-                        break;
-                    }
+                if (tempImageObj.hasCoords) {
+                    Timber.d("not null fild EXIF" + tempImageObj.hasCoords + " coords" + tempImageObj.decimalCoords);
+                    // Current image has gps coordinates and it's not current gps locaiton
+                    Timber.d("This filePath has image coords:" + file.getAbsolutePath());
+                    similarImageInterface.showSimilarImageFragment(filePath, file.getAbsolutePath());
                 }
             }
         }
@@ -192,38 +185,19 @@ public class FileProcessor implements Callback {
      */
     @SuppressLint("CheckResult")
     private void useImageCoords() {
-        if (decimalCoords != null) {
-            Timber.d("Decimal coords of image: %s", decimalCoords);
-            Timber.d("is EXIF data present:" + imageObj.imageCoordsExists + " from findOther image");
+        Timber.d("is EXIF data present:" + imageObj.hasCoords + " from findOther image");
 
-            // Only set cache for this point if image has coords
-            if (imageObj.imageCoordsExists) {
-                double decLongitude = imageObj.getDecLongitude();
-                double decLatitude = imageObj.getDecLatitude();
-                cacheController.setQtPoint(decLongitude, decLatitude);
-            }
-
-            List<String> displayCatList = cacheController.findCategory();
-            boolean catListEmpty = displayCatList.isEmpty();
-
-
-            // If no categories found in cache, call MediaWiki API to match image coords with nearby Commons categories
-            if (catListEmpty) {
-                compositeDisposable.add(apiCall.request(decimalCoords)
-                        .subscribeOn(Schedulers.io())
-                        .observeOn(Schedulers.io())
-                        .subscribe(
-                                gpsCategoryModel::setCategoryList,
-                                throwable -> {
-                                    Timber.e(throwable);
-                                    gpsCategoryModel.clear();
-                                }
-                        ));
-                Timber.d("displayCatList size 0, calling MWAPI %s", displayCatList);
-            } else {
-                Timber.d("Cache found, setting categoryList in model to %s", displayCatList);
-                gpsCategoryModel.setCategoryList(displayCatList);
-            }
+        // Only set cache for this point if image has coords
+        if (imageObj.hasCoords) {
+            gpsCacheController.findCategories(imageObj)
+                    .observeOn(Schedulers.io())
+                    .subscribe(
+                            gpsCategoryModel::setCategoryList,
+                            throwable -> {
+                                Timber.e(throwable);
+                                gpsCategoryModel.clear();
+                            }
+                    );
         } else {
             Timber.d("EXIF: no coords");
         }
@@ -232,7 +206,7 @@ public class FileProcessor implements Callback {
     @Override
     public void onPositiveResponse() {
         imageObj = tempImageObj;
-        decimalCoords = imageObj.getCoords();// Not necessary to use gps as image already ha EXIF data
+        decimalCoords = imageObj.decimalCoords;// Not necessary to use gps as image already ha EXIF data
         Timber.d("EXIF from tempImageObj");
         useImageCoords();
     }

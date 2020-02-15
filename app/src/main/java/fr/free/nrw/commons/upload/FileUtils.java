@@ -18,6 +18,7 @@ import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+import fr.free.nrw.commons.upload.metadata.GPSCoordinates;
 import timber.log.Timber;
 
 public class FileUtils {
@@ -68,9 +69,9 @@ public class FileUtils {
 
         try {
             ExifInterface exifInterface = new ExifInterface(filePath);
-            GPSExtractor imageObj = new GPSExtractor(exifInterface);
-            if (imageObj.imageCoordsExists) { // If image has geolocation information in its EXIF
-                return imageObj.getCoords();
+            GPSCoordinates imageObj = GPSCoordinates.from(exifInterface);
+            if (imageObj.hasCoords) { // If image has geolocation information in its EXIF
+                return imageObj.decimalCoords;
             } else {
                 return "";
             }

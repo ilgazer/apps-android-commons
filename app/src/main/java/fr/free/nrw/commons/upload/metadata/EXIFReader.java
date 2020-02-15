@@ -1,4 +1,4 @@
-package fr.free.nrw.commons.upload;
+package fr.free.nrw.commons.upload.metadata;
 
 import androidx.exifinterface.media.ExifInterface;
 
@@ -20,7 +20,7 @@ public class EXIFReader {
     public EXIFReader() {
     }
 
-    public Single<Integer> processMetadata(String path) {
+    public Single<Integer> checkBasicMetadata(String path) {
         try {
             ExifInterface exif = new ExifInterface(path);
             if (exif.getAttribute(ExifInterface.TAG_MAKE) != null
